@@ -16,6 +16,7 @@
 #ifndef DYNMSG__TYPESUPPORT_HPP_
 #define DYNMSG__TYPESUPPORT_HPP_
 
+#include <tuple>
 #include <utility>
 #include <string>
 
@@ -59,6 +60,11 @@ typedef const rosidl_message_type_support_t * (* get_message_ts_func)();
 // An interface type can be identified by its namespace (i.e. the package that stores it) and its
 // type name
 using InterfaceTypeName = std::pair<std::string, std::string>;
+
+// Full interface type name including the interface category (msg, srv, action)
+// Format: (package_name, interface_type, type_name)
+// Example: ("std_srvs", "srv", "Trigger_Request")
+using FullInterfaceTypeName = std::tuple<std::string, std::string, std::string>;
 }  // extern "C"
 
 namespace dynmsg
@@ -80,6 +86,14 @@ namespace c
  * binary buffer.
  */
 const TypeInfo * get_type_info(const InterfaceTypeName & interface_type);
+
+/// Search for and load the introspection library for a full interface type (msg/srv/action).
+/**
+ * This overload accepts a FullInterfaceTypeName which includes the interface category.
+ * This allows loading type info for services and actions in addition to messages.
+ * \see get_type_info(const InterfaceTypeName &)
+ */
+const TypeInfo * get_type_info(const FullInterfaceTypeName & interface_type);
 
 /// Initialise a RosMessage structure.
 /**
@@ -119,6 +133,12 @@ namespace cpp
  * \see dynmsg::c::get_type_info()
  */
 const TypeInfo_Cpp * get_type_info(const InterfaceTypeName & interface_type);
+
+/// C++ version of dynmsg::c::get_type_info() for full interface types (msg/srv/action)
+/**
+ * \see dynmsg::c::get_type_info(const FullInterfaceTypeName &)
+ */
+const TypeInfo_Cpp * get_type_info(const FullInterfaceTypeName & interface_type);
 
 /// C++ version of dynmsg::c::ros_message_with_typeinfo_init()
 /**
