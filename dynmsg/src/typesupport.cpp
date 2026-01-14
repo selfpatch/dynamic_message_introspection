@@ -168,7 +168,8 @@ const TypeInfo_Cpp * get_type_info(const FullInterfaceTypeName & interface_type)
   }
 
   // Try the unmangled C-style function name first (more reliable across compilers)
-  // Format: rosidl_typesupport_introspection_cpp__get_message_type_support_handle__[pkg]__[iface]__[type]
+  // Format: rosidl_typesupport_introspection_cpp__get_message_type_support_handle__
+  //         [pkg]__[iface]__[type]
   std::string ts_func_name_c =
     "rosidl_typesupport_introspection_cpp__get_message_type_support_handle__" +
     pkg_name + "__" + iface_type + "__" + type_name;
