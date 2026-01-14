@@ -32,9 +32,19 @@ namespace c
 
 const TypeInfo * get_type_info(const InterfaceTypeName & interface_type)
 {
+  // Delegate to the full version with "msg" as the default interface type
+  return get_type_info(FullInterfaceTypeName{interface_type.first, "msg", interface_type.second});
+}
+
+const TypeInfo * get_type_info(const FullInterfaceTypeName & interface_type)
+{
+  const std::string & pkg_name = std::get<0>(interface_type);
+  const std::string & iface_type = std::get<1>(interface_type);  // msg, srv, or action
+  const std::string & type_name = std::get<2>(interface_type);
+
   // Load the introspection library for the package containing the requested type
   std::stringstream ts_lib_name;
-  ts_lib_name << "lib" << interface_type.first << "__rosidl_typesupport_introspection_c.so";
+  ts_lib_name << "lib" << pkg_name << "__rosidl_typesupport_introspection_c.so";
   RCUTILS_LOG_DEBUG_NAMED(
     "dynmsg",
     "Loading introspection type support library %s",
@@ -49,7 +59,7 @@ const TypeInfo * get_type_info(const InterfaceTypeName & interface_type)
   // interface type we are interested in
   std::stringstream ts_func_name;
   ts_func_name << "rosidl_typesupport_introspection_c__get_message_type_support_handle__" <<
-    interface_type.first << "__msg__" << interface_type.second;
+    pkg_name << "__" << iface_type << "__" << type_name;
   RCUTILS_LOG_DEBUG_NAMED(
     "dynmsg", "Loading type support function %s", ts_func_name.str().c_str());
 
@@ -134,8 +144,16 @@ namespace cpp
 
 const TypeInfo_Cpp * get_type_info(const InterfaceTypeName & interface_type)
 {
-  const std::string pkg_name = interface_type.first;
-  const std::string msg_name = interface_type.second;
+  // Delegate to the full version with "msg" as the default interface type
+  return get_type_info(FullInterfaceTypeName{interface_type.first, "msg", interface_type.second});
+}
+
+const TypeInfo_Cpp * get_type_info(const FullInterfaceTypeName & interface_type)
+{
+  const std::string & pkg_name = std::get<0>(interface_type);
+  const std::string & iface_type = std::get<1>(interface_type);  // msg, srv, or action
+  const std::string & type_name = std::get<2>(interface_type);
+
   // Load the introspection library for the package containing the requested type
   std::string ts_lib_name = "lib" + pkg_name + "__rosidl_typesupport_introspection_cpp.so";
   RCUTILS_LOG_DEBUG_NAMED(
@@ -149,36 +167,37 @@ const TypeInfo_Cpp * get_type_info(const InterfaceTypeName & interface_type)
     return nullptr;
   }
 
-  // Load the function that, when called, will give us the introspection information for the
-  // interface type we are interested in
-  // The name here is mangled since this is C++. However, the mangling is fairly simple since it's
-  // all the same. For example, we can get the symbols for a specific package this:
-  //    $ nm install/[pkg name]/lib/lib[pkg name]__rosidl_typesupport_introspection_cpp.so | grep get_message_type_support_handle  # NOLINT
-  // for std_msgs:
-  //    $ nm install/std_msgs/lib/libstd_msgs__rosidl_typesupport_introspection_cpp.so | grep get_message_type_support_handle  # NOLINT
-  // The first group is the unmangled C functions and the second one is the mangled C++ functions.
-  // Given a package name and a message name, the symbol is thus:
-  //    _ZN36rosidl_typesupport_introspection_cpp31get_message_type_support_handleIN[pkg name length][pkg name]3msg[msg name length + 1][msg name]_ISaIvEEEEEPK29rosidl_message_type_support_tv  // NOLINT
-  // Example for std_msgs/msg/String:
-  //    _ZN36rosidl_typesupport_introspection_cpp31get_message_type_support_handleIN8std_msgs3msg7String_ISaIvEEEEEPK29rosidl_message_type_support_tv  // NOLINT
-  //      where:
-  //        pkg name = std_msgs
-  //        pkg name length = 8
-  //        msg name = String
-  //        msg name length + 1 = 6 + 1 = 7
-  //          (this is because there is always a '_' in the internal template name at the end,
-  //           e.g. 'String_')
-  std::string ts_func_name =
-    "_ZN36rosidl_typesupport_introspection_cpp31get_message_type_support_handleIN" +
-    std::to_string(pkg_name.length()) + pkg_name + "3msg" +
-    std::to_string(msg_name.length() + 1) + msg_name +
-    "_ISaIvEEEEEPK29rosidl_message_type_support_tv";
-  RCUTILS_LOG_DEBUG_NAMED("dynmsg", "Loading C++ type support function %s", ts_func_name.c_str());
+  // Try the unmangled C-style function name first (more reliable across compilers)
+  // Format: rosidl_typesupport_introspection_cpp__get_message_type_support_handle__[pkg]__[iface]__[type]
+  std::string ts_func_name_c =
+    "rosidl_typesupport_introspection_cpp__get_message_type_support_handle__" +
+    pkg_name + "__" + iface_type + "__" + type_name;
+  RCUTILS_LOG_DEBUG_NAMED("dynmsg", "Trying C-style function name: %s", ts_func_name_c.c_str());
 
   get_message_ts_func introspection_type_support_handle_func =
     reinterpret_cast<get_message_ts_func>(dlsym(
       introspection_type_support_lib,
-      ts_func_name.c_str()));
+      ts_func_name_c.c_str()));
+
+  if (nullptr == introspection_type_support_handle_func) {
+    // Fall back to mangled C++ name for messages only (backward compatibility)
+    // The mangled name format only works reliably for "msg" types
+    if (iface_type == "msg") {
+      std::string ts_func_name_cpp =
+        "_ZN36rosidl_typesupport_introspection_cpp31get_message_type_support_handleIN" +
+        std::to_string(pkg_name.length()) + pkg_name + "3msg" +
+        std::to_string(type_name.length() + 1) + type_name +
+        "_ISaIvEEEEEPK29rosidl_message_type_support_tv";
+      RCUTILS_LOG_DEBUG_NAMED("dynmsg", "Trying mangled C++ function name: %s",
+        ts_func_name_cpp.c_str());
+
+      introspection_type_support_handle_func =
+        reinterpret_cast<get_message_ts_func>(dlsym(
+          introspection_type_support_lib,
+          ts_func_name_cpp.c_str()));
+    }
+  }
+
   if (nullptr == introspection_type_support_handle_func) {
     RCUTILS_LOG_ERROR_NAMED(
       "dynmsg",
