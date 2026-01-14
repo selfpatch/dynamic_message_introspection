@@ -91,7 +91,7 @@ if(BUILD_TESTING)
     yaml_cpp_vendor
   )
   ament_add_gtest(read_msg_buffer test/test_read_msg_buffer.cpp)
-  ament_target_dependencies(read_msg_buffer example_interfaces test_msgs)
+  ament_target_dependencies(read_msg_buffer example_interfaces test_msgs yaml_cpp_vendor)
   target_link_libraries(read_msg_buffer dynmsg_demo_library)
 endif()
 

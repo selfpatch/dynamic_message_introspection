@@ -13,6 +13,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(dynmsg REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(yaml_cpp_vendor REQUIRED)
 
 add_executable(conversion_cpp
   examples/conversion_cpp.cpp
@@ -20,6 +21,7 @@ add_executable(conversion_cpp
 ament_target_dependencies(conversion_cpp
   dynmsg
   std_msgs
+  yaml_cpp_vendor
 )
 install(TARGETS
   conversion_cpp
@@ -32,6 +34,7 @@ add_executable(conversion_c
 ament_target_dependencies(conversion_c
   dynmsg
   std_msgs
+  yaml_cpp_vendor
 )
 install(TARGETS
   conversion_c
@@ -56,6 +59,7 @@ if(BUILD_TESTING)
     rcl_interfaces
     std_msgs
     test_msgs
+    yaml_cpp_vendor
   )
 endif()
 
