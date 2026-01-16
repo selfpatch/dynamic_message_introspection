@@ -51,7 +51,7 @@ ament_target_dependencies(dynmsg
   rosidl_typesupport_introspection_cpp
   yaml_cpp_vendor
 )
-target_link_libraries(dynmsg yaml-cpp)
+target_link_libraries(dynmsg yaml-cpp::yaml-cpp)
 target_include_directories(dynmsg PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>"
@@ -66,6 +66,7 @@ ament_export_dependencies(rosidl_runtime_cpp)
 ament_export_dependencies(rosidl_typesupport_introspection_c)
 ament_export_dependencies(rosidl_typesupport_introspection_cpp)
 ament_export_dependencies(yaml_cpp_vendor)
+ament_export_dependencies(yaml-cpp)
 
 install(
   DIRECTORY include/ ${CMAKE_CURRENT_BINARY_DIR}/include/
